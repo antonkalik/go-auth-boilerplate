@@ -144,19 +144,15 @@ func Login(c *fiber.Ctx) error {
 // @Success 200 {object} models.APIResponse
 // @Router /user/logout [post]
 func Logout(c *fiber.Ctx) error {
-	// Get token from Authorization header
 	token := c.Get("Authorization")
 	if token != "" {
-		// Remove "Bearer " prefix if present
 		token = strings.TrimPrefix(token, "Bearer ")
-		// Delete the session from Redis
 		ctx := context.Background()
 		if err := database.RedisClient.Del(ctx, token).Err(); err != nil {
 			log.Printf("Error deleting session from Redis: %v", err)
 		}
 	}
 
-	// Also check for token in cookies
 	cookieToken := c.Cookies("session")
 	if cookieToken != "" {
 		ctx := context.Background()
@@ -272,19 +268,15 @@ func GetSession(c *fiber.Ctx) error {
 func DeleteUser(c *fiber.Ctx) error {
 	userId := c.Locals("user_id").(float64)
 
-	// Get the token from Authorization header
 	token := c.Get("Authorization")
 	if token != "" {
-		// Remove "Bearer " prefix if present
 		token = strings.TrimPrefix(token, "Bearer ")
-		// Delete the session from Redis
 		ctx := context.Background()
 		if err := database.RedisClient.Del(ctx, token).Err(); err != nil {
 			log.Printf("Error deleting session from Redis: %v", err)
 		}
 	}
 
-	// Delete the user (posts will be deleted automatically due to cascade)
 	if err := db.Delete(&models.User{}, uint(userId)).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Could not delete user",
@@ -323,7 +315,6 @@ func UpdateUser(c *fiber.Ctx) error {
 		})
 	}
 
-	// Update and validate fields
 	if updates.FirstName != "" {
 		if len(updates.FirstName) < 2 || len(updates.FirstName) > 50 {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

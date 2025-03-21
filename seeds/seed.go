@@ -38,8 +38,6 @@ func createUserIfNotExists(user *models.User) error {
 	var existingUser models.User
 	err := database.DB.Where("email = ?", user.Email).First(&existingUser).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		// User doesn't exist, create new user
-		// Hash the password before creating
 		if err := user.BeforeSave(nil); err != nil {
 			return err
 		}
@@ -52,17 +50,14 @@ func createUserIfNotExists(user *models.User) error {
 		return err
 	}
 
-	// User exists, update the ID for reference
 	user.ID = existingUser.ID
 	log.Printf("User already exists: %s %s", user.FirstName, user.LastName)
 	return nil
 }
 
 func Seed() error {
-	// Seed the random number generator
 	rand.Seed(time.Now().UnixNano())
 
-	// Create test user with a known password hash
 	testUser := models.User{
 		FirstName: "Anton",
 		LastName:  "Kalik",
@@ -71,17 +66,14 @@ func Seed() error {
 		Password:  "Pass123",
 	}
 
-	// Create test user if not exists
 	if err := createUserIfNotExists(&testUser); err != nil {
 		log.Printf("Error handling test user: %v", err)
 		return err
 	}
 
-	// Check if user has less than 20 posts
 	var postCount int64
 	database.DB.Model(&models.Post{}).Where("user_id = ?", testUser.ID).Count(&postCount)
 
-	// Create remaining posts to reach 20
 	remainingPosts := 20 - int(postCount)
 	if remainingPosts > 0 {
 		for i := 0; i < remainingPosts; i++ {
@@ -93,7 +85,6 @@ func Seed() error {
 		log.Printf("Created %d new posts for user %s", remainingPosts, testUser.Email)
 	}
 
-	// Create additional users with no posts
 	additionalUsers := []models.User{
 		{
 			FirstName: "John",

@@ -45,9 +45,7 @@ type TestInstance struct {
 }
 
 func removeContainerIfExists(pool *dockertest.Pool, containerName string) error {
-	// Try to find and remove the container if it exists
 	if container, err := pool.Client.InspectContainer(containerName); err == nil {
-		// Container exists, try to remove it
 		if container.State.Running {
 			if err := pool.Client.StopContainer(containerName, 10); err != nil {
 				return fmt.Errorf("could not stop container %s: %v", containerName, err)
@@ -73,7 +71,6 @@ func removeNetworkIfExists(pool *dockertest.Pool, networkName string) error {
 
 	for _, network := range networks {
 		if network.Name == networkName {
-			// Get all containers in the network
 			containers, err := pool.Client.ListContainers(docker.ListContainersOptions{
 				All: true,
 				Filters: map[string][]string{
@@ -84,7 +81,6 @@ func removeNetworkIfExists(pool *dockertest.Pool, networkName string) error {
 				return fmt.Errorf("could not list containers in network: %v", err)
 			}
 
-			// Disconnect and remove all containers from the network
 			for _, container := range containers {
 				if err := pool.Client.DisconnectNetwork(network.ID, docker.NetworkConnectionOptions{
 					Container: container.ID,
@@ -94,7 +90,6 @@ func removeNetworkIfExists(pool *dockertest.Pool, networkName string) error {
 				}
 			}
 
-			// Now try to remove the network
 			if err := pool.Client.RemoveNetwork(network.ID); err != nil {
 				return fmt.Errorf("could not remove network %s: %v", networkName, err)
 			}
@@ -113,7 +108,6 @@ func NewTestInstance(t *testing.T) *TestInstance {
 }
 
 func setupTestInfrastructure(t *testing.T) (*TestInstance, error) {
-	// Set default environment variables for testing if not already set
 	if os.Getenv("DB_USER") == "" {
 		os.Setenv("DB_USER", "postgres")
 	}
@@ -137,17 +131,14 @@ func setupTestInfrastructure(t *testing.T) (*TestInstance, error) {
 
 	pool.MaxWait = 60 * time.Second
 
-	// Remove existing container if it exists
 	if err := removeContainerIfExists(pool, containerName); err != nil {
 		return nil, err
 	}
 
-	// Remove existing network if it exists
 	if err := removeNetworkIfExists(pool, networkName); err != nil {
 		return nil, err
 	}
 
-	// Create a network for the container
 	network, err := pool.CreateNetwork(networkName)
 	if err != nil {
 		return nil, fmt.Errorf("could not create network: %v", err)
@@ -158,7 +149,6 @@ func setupTestInfrastructure(t *testing.T) (*TestInstance, error) {
 		network: network,
 	}
 
-	// Start PostgreSQL container
 	postgresContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "go_auth_boilerplate_postgres",
 		Repository: "postgres",
@@ -179,7 +169,6 @@ func setupTestInfrastructure(t *testing.T) (*TestInstance, error) {
 		return nil, fmt.Errorf("could not start postgres container: %v", err)
 	}
 
-	// Start Redis container
 	redisContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:         "go_auth_boilerplate_redis",
 		Repository:   "redis",
@@ -197,11 +186,10 @@ func setupTestInfrastructure(t *testing.T) (*TestInstance, error) {
 		return nil, fmt.Errorf("could not start redis container: %v", err)
 	}
 
-	instance.resource = postgresContainer // Keep track of postgres container for cleanup
+	instance.resource = postgresContainer
 
 	instance.RedisURL = fmt.Sprintf("redis://localhost:%s", os.Getenv("REDIS_PORT"))
 
-	// Wait for PostgreSQL to be ready
 	if err := pool.Retry(func() error {
 		exitCode, err := postgresContainer.Exec(
 			[]string{"pg_isready", "-U", os.Getenv("DB_USER")},
@@ -215,7 +203,6 @@ func setupTestInfrastructure(t *testing.T) (*TestInstance, error) {
 		return nil, fmt.Errorf("postgres failed to become ready: %v", err)
 	}
 
-	// Wait for Redis to be ready
 	if err := pool.Retry(func() error {
 		exitCode, err := redisContainer.Exec(
 			[]string{"redis-cli", "ping"},
@@ -229,7 +216,6 @@ func setupTestInfrastructure(t *testing.T) (*TestInstance, error) {
 		return nil, fmt.Errorf("redis failed to become ready: %v", err)
 	}
 
-	// Setup PostgreSQL connection with retry
 	dsn := fmt.Sprintf("host=localhost port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_PORT"),
 		os.Getenv("DB_USER"),
@@ -253,14 +239,12 @@ func setupTestInfrastructure(t *testing.T) (*TestInstance, error) {
 		return nil, fmt.Errorf("could not connect to postgres: %v", err)
 	}
 
-	// Run migrations
 	if err := db.AutoMigrate(&models.User{}, &models.Post{}); err != nil {
 		return nil, fmt.Errorf("could not migrate database: %v", err)
 	}
 
 	instance.DB = db
 
-	// Verify Redis connection
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf("localhost:%s", os.Getenv("REDIS_PORT")),
 	})
@@ -305,7 +289,6 @@ func NewTestServer(t *testing.T) *TestServer {
 }
 
 func (ts *TestServer) Close(t *testing.T) {
-	// Just truncate tables, don't close connections
 	ts.DB.Exec("TRUNCATE users, posts CASCADE")
 }
 

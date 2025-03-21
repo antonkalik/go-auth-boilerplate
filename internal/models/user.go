@@ -23,7 +23,6 @@ type User struct {
 
 func (u *User) BeforeSave(tx *gorm.DB) error {
 	if u.Password != "" {
-		// Check if the password is already hashed
 		if !strings.HasPrefix(u.Password, "$2a$") {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 			if err != nil {

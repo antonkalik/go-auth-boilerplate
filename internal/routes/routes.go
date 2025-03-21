@@ -9,7 +9,6 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, db *gorm.DB, redisURL string) {
-	// Initialize handlers with dependencies
 	handlers.InitHandlers(db, redisURL)
 
 	api := app.Group("/api/v1")
