@@ -39,9 +39,10 @@ go mod download
 docker compose --env-file config/development.env down -v && docker compose --env-file config/development.env up -d
 ```
 
-5. Run migrations:
+5. Run migrations: <br />
+For migration tool run `brew install golang-migrate`. Before run the command, keep in mind that the port for DB from your env. In the case of development.env - `5433`
 ```bash
-migrate -path migrations -database "postgresql://postgres:postgres@localhost:5432/go_auth_boilerplate?sslmode=disable" up
+migrate -path migrations -database "postgresql://postgres:postgres@localhost:5433/go_auth_boilerplate?sslmode=disable" up
 ```
 
 6. Run seeds:
